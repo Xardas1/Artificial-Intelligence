@@ -1,60 +1,102 @@
 import numpy as np
-import gym
+import gymnasium as gym
 import pdb
 from collections import deque
 import torch
-from dqn_agent import image_preprocess, stack_images, create_input_image, DQN, create_replay_memory, convert_to_tensor
+from dqn_agent import image_preprocess, stack_images, create_input_image, DQN, create_replay_memory, extract_states, extract_actions, create_correct_pred_vectorized, extract_rewards, extract_next_states, calculate_y_target, e_greedy_policy
+from dqn_agent import epsilon_decay
+import torch
+import torch.nn as nn
+import torch.nn.functional as F 
+from torch import optim
 from random import sample
 
 
-env = gym.make("ALE/Pong-v5", render_mode="human")
-obs = env.reset()
+env = gym.make("ALE/Pong-v5", render_mode=None)
 
 
 print("Action Space:", env.action_space)
 print("Possible actions:", list(range(env.action_space.n)))
 print("Observation Space:", env.observation_space)
 
+
+epochs = 5000000
+learning_rate = 0.0001
+gamma = 0.99
+epsilon_start = 1.0
+epsilon_final = 0.1
+decay_steps = 1000000
+epsilon = 1
+decay_rate = (epsilon_start - epsilon_final) / decay_steps
 list_to_stack = []
+initial_obs = []
 et = []
 st_prev_list = deque(maxlen=2)
 model = DQN(in_channels=4, num_actions=6)
+loss_fn = nn.MSELoss()
+optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+target_model = DQN(in_channels=4, num_actions=6)
+target_model.load_state_dict(model.state_dict())
 replay_memory = deque(maxlen=1000000)
 d = 0
+terminated = True
+truncated = True
+
+
 
 for i in range(1, 1000):
-    env.render()
-    action = env.action_space.sample()
+    if terminated or truncated:
+        obs, info = env.reset()
+     
+    image_preprocessed = image_preprocess(obs)
+
+    if i == 1:
+        for f in range(4):
+            stacked_images = create_input_image(image_preprocessed, list_to_stack)
+    else:
+        stacked_images = create_input_image(image_preprocessed, list_to_stack)
+
+    model_batch = torch.unsqueeze(stacked_images, 0)
+
+    actions = model(model_batch)
+
+    pdb.set_trace
+    action = e_greedy_policy(actions, epsilon)
+
+    pdb.set_trace()
+    epsilon = epsilon_decay(epsilon, decay_rate)
 
     obs, reward, terminated, truncated, info = env.step(action)
 
-    image_preprocessed= image_preprocess(obs)
-
-    #stacked_images = create_input_image(image_preprocessed, list_to_stack)
-    image_preprocessed= image_preprocess(obs)
-    stacked_images = create_input_image(image_preprocessed, list_to_stack)
-
-    if i >= 4:
-        st_prev_list.append(stacked_images)
-        
-
+    st_prev_list.append(stacked_images)
 
     replay_memory = create_replay_memory(st_prev_list, replay_memory, action, reward)
- 
+    
+    if i % 100 == 0:
+        target_model.load_state_dict(model.state_dict())
+
+
     if len(replay_memory) >= 32 and i % 4 == 0:
         batch = sample(replay_memory, 32)
-        #pdb.set_trace()
-        states_st = convert_to_tensor(batch)
-        #pdb.set_trace()
-        #y_pred = model(stacked_images)
-        #pdb.set_trace
+        model_states = extract_states(batch)
+        model_actions = extract_actions(batch)
+        model_rewards = extract_rewards(batch)
+        model_next_states = extract_next_states(batch)
+        y_pred_almost = model(model_states)
+        y_pred = create_correct_pred_vectorized(y_pred_almost, model_actions)
+        q_target = target_model(model_next_states)
+        q_max = q_target.max(dim=1).values
+        y_target = calculate_y_target(model_rewards, gamma, q_max)
+        loss = loss_fn(y_pred, y_target)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-    if terminated or truncated:
-        obs = env.reset()
+    if i % 10000 == 0:
+        torch.save(model.state_dict(), "pong_model.pth")
 
 
+    
+print("It Worked bitdh")
 
 
-
-#env.close()
-#print(env.action_space)
