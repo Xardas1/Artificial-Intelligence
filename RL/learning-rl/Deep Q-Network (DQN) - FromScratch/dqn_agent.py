@@ -8,23 +8,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import optim
 
-
 env = gym.make("ALE/Pong-v5", render_mode=None)
 
 class DQN(nn.Module):
     def __init__(self, in_channels, num_actions):
         super(DQN, self).__init__()
-
-        # First convolutional layer: 4 input channels, 32 output channels, 8x8 kernel, stride 4, padding=0
         self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=32, kernel_size=8, stride=4, padding=0)
-        # Second convolutional layer: 32 input channels, 64 output channels, 4x4 kernel, stride=2, padding=0
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2, padding=0)
-        # Third convolutional layer: 64 inputchannels, 64 output channels, 3x3 kernel, stride=1, padding=0
         self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=0)
-        # FC layer
         self.fc1 = nn.Linear(64 * 7 * 7, num_actions)
-
-
+    
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
@@ -52,15 +45,16 @@ def stack_images(list_to_stack):
     stacked_images = torch.tensor(stacked_images, dtype=torch.float32)
     return stacked_images
 
+# FIX: Zawsze zwracaj coś albo None
 def create_input_image(image, list_to_stack):
-    if len(list_to_stack) < 4:
-        list_to_stack.append(image)
-    else:
+    if len(list_to_stack) >= 4:
         list_to_stack.pop(0)
-        list_to_stack.append(image)
-    if len(list_to_stack) % 4 == 0:
+    list_to_stack.append(image)
+    
+    if len(list_to_stack) == 4:
         stacking_images = stack_images(list_to_stack)
         return stacking_images
+    return None
 
 def create_replay_memory(state_list, replay_memory, action, reward):
     if len(state_list) == 2:
@@ -70,7 +64,7 @@ def create_replay_memory(state_list, replay_memory, action, reward):
     return replay_memory
 
 def extract_states(batch):
-    states_st  = torch.stack([batch[i][0] for i in range(len(batch))])
+    states_st = torch.stack([batch[i][0] for i in range(len(batch))])
     return states_st
 
 def extract_actions(batch):
@@ -85,10 +79,10 @@ def extract_next_states(batch):
     next_states_st1 = torch.stack([batch[i][3] for i in range(len(batch))])
     return next_states_st1
 
-def create_correct_pred(y_pred,actions):
+def create_correct_pred(y_pred, actions):
     empty_list = []
     for j, i in enumerate(actions):
-            empty_list.append(y_pred[j][i])
+        empty_list.append(y_pred[j][i])
     return empty_list
 
 def create_correct_pred_vectorized(y_pred, actions):
@@ -110,15 +104,3 @@ def e_greedy_policy(actions, epsilon):
 def epsilon_decay(epsilon, decay_rate):
     epsilon = max(0.1, epsilon - decay_rate)
     return epsilon
-
-
-#env.render()
-
-
-
-
-
-
-#plt.imshow(preprocessed_image, cmap="gray")  # Add cmap if grayscale
-#plt.axis("off")
-#plt.show()
