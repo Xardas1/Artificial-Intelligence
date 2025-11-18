@@ -40,21 +40,23 @@ target_model.load_state_dict(model.state_dict())
 replay_memory = deque(maxlen=1000000)
 d = 0
 
-
+# FIX: Reset na początku i wypełnij stack pierwszą klatką
 obs, info = env.reset()
+first_frame = image_preprocess(obs)
+for _ in range(4):
+    list_to_stack.append(first_frame)
+
 terminated = False
 truncated = False
 
-for i in range(1, epochs):  
+for i in range(1, epochs):
     
     image_preprocessed = image_preprocess(obs)
+    stacked_images = create_input_image(image_preprocessed, list_to_stack)
     
-    
-    if i == 1:
-        for f in range(4):
-            stacked_images = create_input_image(image_preprocessed, list_to_stack)
-    else:
-        stacked_images = create_input_image(image_preprocessed, list_to_stack)
+    # FIX: Sprawdź czy stacked_images nie jest None
+    if stacked_images is None:
+        continue
     
     model_batch = torch.unsqueeze(stacked_images, 0)
     actions = model(model_batch)
@@ -68,11 +70,15 @@ for i in range(1, epochs):
     st_prev_list.append(stacked_images)
     replay_memory = create_replay_memory(st_prev_list, replay_memory, action, reward)
     
-    
+    # FIX: Reset środowiska AFTER step i wyczyść stack
     if terminated or truncated:
         obs, info = env.reset()
-        list_to_stack = []  
-        st_prev_list.clear() 
+        list_to_stack = []
+        # Wypełnij stack nową pierwszą klatką
+        first_frame = image_preprocess(obs)
+        for _ in range(4):
+            list_to_stack.append(first_frame)
+        st_prev_list.clear()
     
     if i % 100 == 0:
         target_model.load_state_dict(model.state_dict())
@@ -100,6 +106,6 @@ for i in range(1, epochs):
         
     if i % 10000 == 0:
         torch.save(model.state_dict(), "pong_model.pth")
-        print(f"Step {i}, Epsilon: {epsilon:.3f}, Loss saved")
+        print(f"Step {i}, Epsilon: {epsilon:.3f}")
     
-print("It Worked bitch")  # FIX #5: literówka xD
+print("It Worked bitch")
