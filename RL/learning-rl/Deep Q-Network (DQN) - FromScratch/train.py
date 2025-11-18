@@ -40,7 +40,6 @@ target_model.load_state_dict(model.state_dict())
 replay_memory = deque(maxlen=1000000)
 d = 0
 
-# FIX: Reset na początku i wypełnij stack pierwszą klatką
 obs, info = env.reset()
 first_frame = image_preprocess(obs)
 for _ in range(4):
@@ -54,7 +53,6 @@ for i in range(1, epochs):
     image_preprocessed = image_preprocess(obs)
     stacked_images = create_input_image(image_preprocessed, list_to_stack)
     
-    # FIX: Sprawdź czy stacked_images nie jest None
     if stacked_images is None:
         continue
     
@@ -70,11 +68,9 @@ for i in range(1, epochs):
     st_prev_list.append(stacked_images)
     replay_memory = create_replay_memory(st_prev_list, replay_memory, action, reward)
     
-    # FIX: Reset środowiska AFTER step i wyczyść stack
     if terminated or truncated:
         obs, info = env.reset()
         list_to_stack = []
-        # Wypełnij stack nową pierwszą klatką
         first_frame = image_preprocess(obs)
         for _ in range(4):
             list_to_stack.append(first_frame)
@@ -109,3 +105,4 @@ for i in range(1, epochs):
         print(f"Step {i}, Epsilon: {epsilon:.3f}")
     
 print("It Worked bitch")
+
