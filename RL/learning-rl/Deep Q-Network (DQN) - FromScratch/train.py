@@ -104,5 +104,6 @@ for i in range(1, epochs):
         torch.save(model.state_dict(), "pong_model.pth")
         print(f"Step {i}, Epsilon: {epsilon:.3f}")
     
-print("It Worked bitch")
+
+
 
