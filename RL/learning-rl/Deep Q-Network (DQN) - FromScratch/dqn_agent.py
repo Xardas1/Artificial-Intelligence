@@ -45,7 +45,6 @@ def stack_images(list_to_stack):
     stacked_images = torch.tensor(stacked_images, dtype=torch.float32)
     return stacked_images
 
-# FIX: Zawsze zwracaj coś albo None
 def create_input_image(image, list_to_stack):
     if len(list_to_stack) >= 4:
         list_to_stack.pop(0)
@@ -59,7 +58,7 @@ def create_input_image(image, list_to_stack):
 def create_replay_memory(state_list, replay_memory, action, reward):
     if len(state_list) == 2:
         replay_memory.extend([
-            (state_list[0], torch.tensor(action), torch.tensor(reward), state_list[1])
+            (state_list[0], torch.tensor(action, dtype=torch.long), torch.tensor(reward, dtype=torch.float32), state_list[1])
         ])
     return replay_memory
 
@@ -93,7 +92,7 @@ def calculate_y_target(reward, gamma, q_max):
     y_target = reward + gamma * q_max
     return y_target
 
-def e_greedy_policy(actions, epsilon):
+def e_greedy_policy(actions, epsilon, env):
     if np.random.random() > epsilon:
         actions = actions.detach().cpu().numpy()
         action = np.argmax(actions)

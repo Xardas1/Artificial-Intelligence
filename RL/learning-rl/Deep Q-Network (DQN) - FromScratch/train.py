@@ -3,13 +3,12 @@ import gymnasium as gym
 import pdb
 from collections import deque
 import torch
-from dqn_agent import image_preprocess, stack_images, create_input_image, DQN, create_replay_memory, extract_states, extract_actions, create_correct_pred_vectorized, extract_rewards, extract_next_states, calculate_y_target, e_greedy_policy
-from dqn_agent import epsilon_decay
-import torch
 import torch.nn as nn
 import torch.nn.functional as F 
 from torch import optim
 from random import sample
+from dqn_agent import image_preprocess, stack_images, create_input_image, DQN, create_replay_memory, extract_states, extract_actions, create_correct_pred_vectorized, extract_rewards, extract_next_states, calculate_y_target, e_greedy_policy
+from dqn_agent import epsilon_decay
 
 env = gym.make("ALE/Pong-v5", render_mode=None)
 print("Action Space:", env.action_space)
@@ -26,8 +25,6 @@ epsilon = 1
 decay_rate = (epsilon_start - epsilon_final) / decay_steps
 
 list_to_stack = []
-initial_obs = []
-et = []
 st_prev_list = deque(maxlen=2)
 
 model = DQN(in_channels=4, num_actions=6)
@@ -38,7 +35,6 @@ target_model = DQN(in_channels=4, num_actions=6)
 target_model.load_state_dict(model.state_dict())
 
 replay_memory = deque(maxlen=1000000)
-d = 0
 
 obs, info = env.reset()
 first_frame = image_preprocess(obs)
@@ -59,7 +55,7 @@ for i in range(1, epochs):
     model_batch = torch.unsqueeze(stacked_images, 0)
     actions = model(model_batch)
     
-    action = e_greedy_policy(actions, epsilon)
+    action = e_greedy_policy(actions, epsilon, env)
     
     epsilon = epsilon_decay(epsilon, decay_rate)
     

@@ -1,0 +1,12 @@
+torch>=1.9.0
+gymnasium>=0.26.0
+gymnasium[atari]>=0.26.0
+torchvision>=0.10.0
+numpy>=1.21.0
+cma>=3.0.0
+
+# Optional: For CarRacing-v3 environment
+# Note: Box2D installation may fail on some systems
+# If it fails, use simple_demo.py instead (works without environment)
+# swig>=4.0.0
+# gymnasium[box2d]>=0.26.0
